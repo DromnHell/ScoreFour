@@ -15,7 +15,7 @@ for x,y,z in [(x,y,z) for x in range(SIZE) for y in range(SIZE) for z in range(S
     pointsToCheckDic[p0] = []
     for vf, vb in zip(half_vectors, mirror_vectors):
         lastF = p0
-        lastB= p0
+        lastB = p0
         fPointList = []
         bPointList = []
         for _ in range(WIN_SIZE-1):

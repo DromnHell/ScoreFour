@@ -1,19 +1,18 @@
 from Game import Game
 from GameState import GameState
-from Player import PlayerRandom, PlayerHuman, PlayerAI
+from Player import PlayerRandom, PlayerHuman, PlayerAI1
 
 # Create the players, the class defines the strategy
-player0 = PlayerRandom()
-player1 = PlayerRandom()
-# use PlayerAI for your own implementation (for player0 or player1)
-#player1 = PlayerAI()
+player0 = PlayerAI1(ID = 0, evaluation = "move_quality" ,depth_limit = 4)
+player1 = PlayerAI1(ID = 1, evaluation = "grid_quality" ,depth_limit = 4)
 
-numberOfGames = 5000
+numberOfGames = 10
 gameLengths = [None] * numberOfGames
 winners = [None] * numberOfGames
 
 for i in range(numberOfGames):
-    game = Game(player0= player0, player1= player1, isVerbose= False, gameState=GameState())
+    print(f'Game {i}')
+    game = Game(player0 = player0, player1 = player1, isVerbose = False, gameState = GameState())
     game.run()
     #basic statistic collection on the game once it's ended
     gameLengths[i] = game.CurrentGameState.MoveCount
