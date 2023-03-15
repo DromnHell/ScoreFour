@@ -3,6 +3,3 @@ __pycache__/*
 
 # Ignore test script
 file_AI1.txt
-
-# Ignore old tree.py script
-tree.py
