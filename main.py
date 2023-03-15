@@ -1,12 +1,12 @@
 from Game import Game
 from GameState import GameState
-from Player import PlayerRandom, PlayerHuman, PlayerAI1
+from Player import PlayerRandom, PlayerHuman, PlayerSearchTreeAI
 
 # Create the players, the class defines the strategy
-player0 = PlayerAI1(ID = 0, evaluation = "move_quality" ,depth_limit = 4)
-player1 = PlayerAI1(ID = 1, evaluation = "grid_quality" ,depth_limit = 4)
+player0 = PlayerRandom(ID = 0)
+player1 = PlayerSearchTreeAI(ID = 1, depth_limit = 4)
 
-numberOfGames = 10
+numberOfGames = 1
 gameLengths = [None] * numberOfGames
 winners = [None] * numberOfGames
 
