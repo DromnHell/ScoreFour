@@ -2,4 +2,4 @@
 __pycache__/*
 
 # Ignore test script
-file_AI1.txt
+residual.py

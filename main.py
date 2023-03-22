@@ -3,8 +3,11 @@ from GameState import GameState
 from Player import PlayerRandom, PlayerHuman, PlayerSearchTreeAI
 
 # Create the players, the class defines the strategy
-player0 = PlayerRandom(ID = 0)
-player1 = PlayerSearchTreeAI(ID = 1, depth_limit = 4)
+player0 = PlayerSearchTreeAI(ID = 0, depthMax = 3)
+#player0 = PlayerHuman(ID = 0)
+player1 = PlayerSearchTreeAI(ID = 1, depthMax = 3)
+#player1 = PlayerHuman(ID = 1)
+#player1 = PlayerRandom(ID = 1)
 
 numberOfGames = 1
 gameLengths = [None] * numberOfGames

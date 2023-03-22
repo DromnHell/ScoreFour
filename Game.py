@@ -1,5 +1,6 @@
 from GameState import GameState 
 from Player import Player
+import datetime
 
 class Game:
     CurrentGameState = None
@@ -13,6 +14,7 @@ class Game:
         self.Player1 = player1
         self.CurrentGameState = gameState
         self.IsVerbose = isVerbose
+        self.file_AI = open(f"file_AI.txt", "w") 
 
     def logInfo(self, message: str)-> None:
         if(self.IsVerbose):
@@ -21,15 +23,19 @@ class Game:
     def run(self) -> None:
         while (not self.CurrentGameState.checkEnd()) :
             currentPlayer = self.Player0 if self.CurrentGameState.IsPlayerZeroTurn else self.Player1
+            start_time = datetime.datetime.now()
             move = currentPlayer.strategy(self.CurrentGameState)
-            print(f'Player : {currentPlayer}, Move : {move}')
-           
+            print(f'Player {currentPlayer.ID}, Move : {move}')
+            end_time = datetime.datetime.now()
+            time = (end_time - start_time).total_seconds()
+            print(f'Time = {time}')
+
             self.logInfo(f"Move {self.CurrentGameState.MoveCount} : player {0 if self.CurrentGameState.IsPlayerZeroTurn else 1} playing move {move}")
             self.CurrentGameState.playLegalMove(move)
+            #print(self.CurrentGameState.Grid)
 
         if self.CurrentGameState.getWinner() is not None:
-            print(f'Winner : {self.CurrentGameState.getWinner()}')
+            #print(f'Winner : {self.CurrentGameState.getWinsner()}')
             self.logInfo(f"END GAME : Player {self.CurrentGameState.getWinner()} wins")
         else :
             self.logInfo("END GAME : draw!")
-

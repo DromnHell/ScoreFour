@@ -1,6 +1,12 @@
 SIZE = 4
 WIN_SIZE = 4
 
+import copy
+
+if WIN_SIZE > SIZE:
+    print('Error : the WIN_SIZE constant has to be less than or equal to the constant SIZE constant.')
+    quit()
+
 #used for no prior information victory conditions
 pointGenerators = [(x,y,z) for x in range(SIZE) for y in range(SIZE) for z in range(SIZE) if x == 0 or y == 0 or z == 0]  
 directions = [1,0,-1]
@@ -40,6 +46,15 @@ class GameState:
         self.IsPlayerZeroTurn = True
         self.LastMove = None
         self.MoveCount = 0
+        self.file_AI = open(f"file_AI.txt", "w") 
+
+    def copy(self):
+        new_game_state = GameState()
+        new_game_state.Grid = copy.deepcopy(self.Grid)
+        new_game_state.IsPlayerZeroTurn = self.IsPlayerZeroTurn
+        new_game_state.LastMove = self.LastMove
+        new_game_state.MoveCount = self.MoveCount
+        return new_game_state
 
     ###
     # returns a list 3-tuples with the coordinates of all legal moves
