@@ -1,8 +1,10 @@
 # Ignore pycache
 __pycache__/*
+.ipynb_checkpoints
 
-# Ignore test script
+# Ignore scripts
 residual.py
 test.py
 test2.py
-exp
+file_AI.txt
+Analyse.ipynb
