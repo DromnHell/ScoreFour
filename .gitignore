@@ -3,3 +3,6 @@ __pycache__/*
 
 # Ignore test script
 residual.py
+test.py
+test2.py
+exp

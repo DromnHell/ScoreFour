@@ -14,7 +14,6 @@ class Game:
         self.Player1 = player1
         self.CurrentGameState = gameState
         self.IsVerbose = isVerbose
-        self.file_AI = open(f"file_AI.txt", "w") 
 
     def logInfo(self, message: str)-> None:
         if(self.IsVerbose):
@@ -29,10 +28,10 @@ class Game:
             end_time = datetime.datetime.now()
             time = (end_time - start_time).total_seconds()
             print(f'Time = {time}')
+            print(f'\n')
 
             self.logInfo(f"Move {self.CurrentGameState.MoveCount} : player {0 if self.CurrentGameState.IsPlayerZeroTurn else 1} playing move {move}")
             self.CurrentGameState.playLegalMove(move)
-            #print(self.CurrentGameState.Grid)
 
         if self.CurrentGameState.getWinner() is not None:
             #print(f'Winner : {self.CurrentGameState.getWinsner()}')

@@ -46,7 +46,6 @@ class GameState:
         self.IsPlayerZeroTurn = True
         self.LastMove = None
         self.MoveCount = 0
-        self.file_AI = open(f"file_AI.txt", "w") 
 
     def copy(self):
         new_game_state = GameState()
@@ -56,11 +55,19 @@ class GameState:
         new_game_state.MoveCount = self.MoveCount
         return new_game_state
 
-    ###
-    # returns a list 3-tuples with the coordinates of all legal moves
-    ###
     def getPossibleMoves(self) -> list:
-        return [(x,y, self.Grid[x][y].index(None)) for x in range(SIZE) for y in range(SIZE) if None in self.Grid[x][y]] #None means a peg spot is empty
+        '''
+        Return a list 3-tuples with the coordinates of all legal moves and their original index
+        '''
+        #return [(x,y, self.Grid[x][y].index(None)) for x in range(SIZE) for y in range(SIZE) if None in self.Grid[x][y]] #None means a peg spot is empty
+        originalIndexMove = 0
+        possibleMoves = []
+        for x in range(SIZE):
+            for y in range(SIZE):
+                if None in self.Grid[x][y]:
+                    possibleMoves.append(((x,y,self.Grid[x][y].index(None)), originalIndexMove))
+                originalIndexMove += 1
+        return(possibleMoves)
 
     def checkEnd(self) -> bool : 
         return self.getWinner() is not None or self.MoveCount == SIZE**3
