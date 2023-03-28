@@ -1,5 +1,16 @@
+'''
+This script is part of the Score Four program. It contains the structure of the grid, the class of the game states,
+and all the methods which allow the players to interact with the game.
+'''
+
 SIZE = 4
 WIN_SIZE = 4
+
+import copy
+
+if WIN_SIZE > SIZE:
+    print('Error : the WIN_SIZE constant has to be less than or equal to the constant SIZE constant.')
+    quit()
 
 #used for no prior information victory conditions
 pointGenerators = [(x,y,z) for x in range(SIZE) for y in range(SIZE) for z in range(SIZE) if x == 0 or y == 0 or z == 0]  
@@ -41,11 +52,27 @@ class GameState:
         self.LastMove = None
         self.MoveCount = 0
 
-    ###
-    # returns a list 3-tuples with the coordinates of all legal moves
-    ###
+    def copy(self):
+        new_game_state = GameState()
+        new_game_state.Grid = copy.deepcopy(self.Grid)
+        new_game_state.IsPlayerZeroTurn = self.IsPlayerZeroTurn
+        new_game_state.LastMove = self.LastMove
+        new_game_state.MoveCount = self.MoveCount
+        return new_game_state
+
     def getPossibleMoves(self) -> list:
-        return [(x,y, self.Grid[x][y].index(None)) for x in range(SIZE) for y in range(SIZE) if None in self.Grid[x][y]] #None means a peg spot is empty
+        '''
+        Return a list 3-tuples with the coordinates of all legal moves and their original index
+        '''
+        #return [(x,y, self.Grid[x][y].index(None)) for x in range(SIZE) for y in range(SIZE) if None in self.Grid[x][y]] #None means a peg spot is empty
+        originalIndexMove = 0
+        possibleMoves = []
+        for x in range(SIZE):
+            for y in range(SIZE):
+                if None in self.Grid[x][y]:
+                    possibleMoves.append(((x,y,self.Grid[x][y].index(None)), originalIndexMove))
+                originalIndexMove += 1
+        return(possibleMoves)
 
     def checkEnd(self) -> bool : 
         return self.getWinner() is not None or self.MoveCount == SIZE**3

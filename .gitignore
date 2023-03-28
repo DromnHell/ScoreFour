@@ -1,5 +1,12 @@
 # Ignore pycache
 __pycache__/*
+.ipynb_checkpoints
 
-# Ignore test script
-file_AI1.txt
+# Ignore scripts
+residual.py
+test.py
+test2.py
+file_AI.txt
+Analyse.ipynb
+RL_MCTS.py
+RL_self_play_batch.py
