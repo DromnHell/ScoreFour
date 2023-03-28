@@ -1,4 +1,11 @@
 
+'''
+This script is part of the Score Four program. It contains the class of the neural network (NN) and functions 
+that allow the player "PlayerRLAI" to learn and play Score Four. The train_self_play() function also allows 
+the NN to train the itself without going through the game loop of the "Game.py" script, but it not fully functional
+at the moment. To do that, simply run this script.
+'''
+
 import GameState
 import numpy as np
 import matplotlib.pyplot as plt
@@ -18,7 +25,6 @@ class ScoreFourNN(nn.Module):
             nn.Linear(128, GameState.SIZE**2)
         )
     def forward(self, x, player_id):
-        #x = torch.cat([x, player_id.view(-1, 1)], dim = 1)
         x = x.view(-1, GameState.SIZE**3) 
         player_id = player_id.view(-1, 1)
         x = torch.cat([x, player_id], dim = 1)
@@ -26,23 +32,21 @@ class ScoreFourNN(nn.Module):
     
 def save_weights(model, file_path):
     '''
-    Save the model
+    Save the model.
     '''
     torch.save(model.state_dict(), file_path)
 
 def load_weights(model, file_path):
     '''
-    Load the weights of the model
+    Load the weights of the model.
     '''
     model.load_state_dict(torch.load(file_path))
-    # Put the template in evaluation mode to disable training-specific features
-    model.eval()
+    #model.eval()
 
 def plot_metrics(rewards, num_moves, window_size):
     '''
-    Plot somes metrics
+    Plot somes metrics. Depreciated.
     '''
-
     rewards_smoothed = np.convolve(rewards, np.ones(window_size) / window_size, mode = 'valid')
     num_moves_smoothed = np.convolve(num_moves, np.ones(window_size) / window_size, mode = 'valid')
 
@@ -62,7 +66,7 @@ def plot_metrics(rewards, num_moves, window_size):
 
 def grid_to_input(grid):
     '''
-    Convert the grid in Numpy array
+    Convert the grid in numpy array.
     '''
     input_tensor = np.zeros((GameState.SIZE**3,))
     for i, layer in enumerate(grid):
@@ -72,9 +76,9 @@ def grid_to_input(grid):
                     input_tensor[i * GameState.SIZE**2 + j * GameState.SIZE + k] = cell + 1
     return torch.tensor(input_tensor.flatten(), dtype = torch.float).unsqueeze(0)
 
-def select_action(current_player_id, gameState: GameState.GameState, model, epsilon):
+def select_action(mode, current_player_id, gameState: GameState.GameState, model, epsilon):
     '''
-    Select the action
+    Select the action.
     '''
     if random.random() < epsilon:
         possible_moves = gameState.getPossibleMoves()
@@ -85,21 +89,31 @@ def select_action(current_player_id, gameState: GameState.GameState, model, epsi
             state_input = grid_to_input(gameState.Grid)
             player_input = torch.tensor([current_player_id], dtype = torch.float).unsqueeze(0)
             q_values = model(state_input, player_input)
+            #print(q_values)
             possible_move_index = [move[1] for move in gameState.getPossibleMoves()]
             possible_q_values = q_values[0][possible_move_index]
-            best_move_index = int(torch.argmax(possible_q_values))
+            if mode == 0:
+                best_move_index = int(torch.argmax(possible_q_values))
+            else:
+                best_move_index = int(torch.argmin(possible_q_values))
+            #print(best_move_index)
             return best_move_index, gameState.getPossibleMoves()[best_move_index]
 
-def update_model(model, optimizer, loss_fn, states, players, actions, rewards, next_states, next_players, dones, gamma = 0.99):
+def update_model(mode, model, optimizer, loss_fn, states, players, actions, rewards, next_states, next_players, dones, gamma = 0.99):
     '''
-    Update the model
+    Update the model.
     '''
     q_values = model(states, players)
     played_q_values = q_values.gather(1, actions.view(-1, 1)).squeeze()
 
     next_q_values = model(next_states, next_players)
-    max_next_q_values, _ = torch.max(next_q_values, dim = 1)
-    target_q_values = rewards + (1 - dones) * gamma * max_next_q_values
+
+    if mode == 0:
+        max_next_q_values, _ = torch.max(next_q_values, dim = 1)
+        target_q_values = rewards + (1 - dones) * gamma * max_next_q_values
+    else:
+        min_next_q_values, _ = torch.min(next_q_values, dim = 1)
+        target_q_values = rewards + (1 - dones) * gamma * min_next_q_values
 
     played_q_values = played_q_values.view(-1, 1)
     target_q_values = target_q_values.view(-1, 1)
@@ -112,13 +126,13 @@ def update_model(model, optimizer, loss_fn, states, players, actions, rewards, n
 
 def train_self_play(model, episodes, epsilon = 1, learning_rate = 0.001):
     '''
-    Train the model with self-play
+    Train the model with self-play. Not fully functional at the moment.
     '''
     rewards = []
     num_moves = []
 
     optimizer = optim.Adam(model.parameters(), lr = learning_rate)
-    loss_fn = nn.SmoothL1Loss()
+    loss_fn = nn.MSELoss()
 
     for episode in range(episodes + 1):
         print(episode)
@@ -130,9 +144,11 @@ def train_self_play(model, episodes, epsilon = 1, learning_rate = 0.001):
         current_player_id = 0
         done = False
 
+        mode = 0
+
         while not done:
 
-            action_index, action = select_action(current_player_id, state, model, epsilon)
+            action_index, action = select_action(mode, current_player_id, state, model, epsilon)
 
             next_state = state.copy()
             next_state.playLegalMove(action[0])
@@ -157,13 +173,13 @@ def train_self_play(model, episodes, epsilon = 1, learning_rate = 0.001):
             next_player_input = torch.tensor([next_player_id], dtype = torch.float).unsqueeze(0)
             done_tensor = torch.tensor([done], dtype = torch.float32)
 
-            update_model(model, optimizer, loss_fn, state_input, player_input, action_tensor, reward_tensor, next_state_input, next_player_input, done_tensor)
+            update_model(mode, model, optimizer, loss_fn, state_input, player_input, action_tensor, reward_tensor, next_state_input, next_player_input, done_tensor)
 
             state = next_state
-
             current_player_id = next_player_id
-
             episode_reward = reward
+
+            mode = 1 - mode
             episode_moves += 1
 
             if done:
@@ -184,11 +200,13 @@ if __name__ == "__main__":
 
     model = ScoreFourNN()
 
-    rewards, num_moves = train_self_play(model, episodes = 1000000)
+    episodes = 1000000
+
+    rewards, num_moves = train_self_play(model, episodes)
 
     plot_metrics(rewards, num_moves, 10000)
 
-    file_path = "score_four_RL_weights.pth"
+    file_path = f"RLAI_SelfPlay_{episodes}ep_weights.pth"
     save_weights(model, file_path)
 
 

@@ -8,3 +8,5 @@ test.py
 test2.py
 file_AI.txt
 Analyse.ipynb
+RL_MCTS.py
+RL_self_play_batch.py

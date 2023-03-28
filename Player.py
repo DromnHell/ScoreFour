@@ -1,15 +1,24 @@
+'''
+This script is part of the Score Four program. It contains all the classes of the different possible players :
+- A random player AI,
+- A human player,
+- A tree search tree AI player,
+- A deep reinforcement learning AI player.
+'''
+
 from abc import ABC, abstractmethod
 import GameState
-import RLModel
+import RLbasic
 import random
 import math
 
 current_IDs = list()
 
+
 class Player(ABC):
     
     def __init__(self, ID) -> None:
-        if ID not in (0, 1):
+        if ID not in (0, 1, "helper"):
             print("Error : the ID of the players has to be be 0 or 1.")
             quit()
         elif ID in current_IDs:
@@ -25,26 +34,29 @@ class Player(ABC):
     def strategy(self, gameState : GameState.GameState) -> tuple: #return a move : a legal triplet of coordinates in the grid
         pass
 
-class PlayerFake(Player):
-
-    def __init__(self, ID) -> None:
-        Player.__init__(self, ID)
-    
-    def strategy(self, gameState: GameState.GameState) -> tuple:
+    @abstractmethod
+    def receive_last_feedback(self, old_gameState, old_player, move, reward, gameState, player):
         pass
+
 
 class PlayerRandom(Player):
 
     def __init__(self, ID) -> None:
         Player.__init__(self, ID)
+        self.name = "RNDAI"
     
     def strategy(self, gameState: GameState.GameState) -> tuple:
         return random.choice(gameState.getPossibleMoves())[0]
     
+    def receive_last_feedback(self, winning_gameState: GameState.GameState, winner, last_move, reward, gameState: GameState.GameState, looser):
+        pass
+    
+
 class PlayerHuman(Player) : 
 
     def __init__(self, ID) -> None:
         Player.__init__(self, ID)
+        self.name = "HUMAN"
 
     def strategy(self, gameState: GameState.GameState) -> tuple:
         possible_moves = gameState.getPossibleMoves()
@@ -61,28 +73,46 @@ class PlayerHuman(Player) :
                     valid_input = True
                 else:
                     print(f'This move is not valid. Please try again.')
-        return possible_moves[chosen_move[0]]
+        return possible_moves[chosen_move][0]
+    
+    def receive_last_feedback(self, winning_gameState: GameState.GameState, winner, last_move, reward, gameState: GameState.GameState, looser):
+        pass
         
+
 class PlayerSearchTreeAI(Player) :
 
-    def __init__(self, ID, depthMax) -> None:
+    def __init__(self, ID, depthMax = 0, epsilon = None) -> None:
         Player.__init__(self, ID)
+        self.name = f"STAI{depthMax}"
         self.depthMax = depthMax
+        self.epsilon = epsilon
         self.alignment_score_table = dict()
         self.build_alignment_score_table()
         self.state_score_table = dict()
     
     def build_alignment_score_table(self):
+        '''
+        Build the alignment score table.
+        The higher the ratio "pawn /empty square" of the window, the higher the score of the window.
+        The distribution of scores follows an exponential function.
+        '''
         win_size = GameState.WIN_SIZE
         for i in range(win_size+1):
             if win_size-i > 0:
                 self.alignment_score_table[(win_size-i, i)] = int((win_size-i)*math.exp(win_size-i))
         
     def compute_alignments_score(self, player, other_player, window) -> int:
-            return self.alignment_score_table.get((window.count(player), window.count(None)), 0) - \
-                        self.alignment_score_table.get((window.count(other_player), window.count(None)), 0)
+        '''
+        Compute the alignements score windows by subtracting the score of player 0 (or 1) from that of player 1 (or 0 respectively).
+        '''
+        return self.alignment_score_table.get((window.count(player), window.count(None)), 0) - \
+                    self.alignment_score_table.get((window.count(other_player), window.count(None)), 0)
     
     def compute_last_move_score(self, gameState: GameState.GameState) -> int:
+        '''
+        Calculates the score of the last move by calculating the score of the 13 segments that intersect in its coordinate,
+        and in the top coordinate.
+        '''
         player = self.ID
         other_player = 1-self.ID
         lastMove = gameState.LastMove 
@@ -141,6 +171,9 @@ class PlayerSearchTreeAI(Player) :
         return score
     
     def MinMaxAlphaBetaPruning(self, gameState: GameState.GameState, depth, alpha, beta, maximizingPlayer) -> int:
+        '''
+        Min max algorithm with alpha beta pruning.
+        '''
         # Terminating condition
         if depth == 0 or gameState.checkEnd():
             # Use a transposition table to save the already computed game state
@@ -180,6 +213,9 @@ class PlayerSearchTreeAI(Player) :
             return bestValue
         
     def random_max_index(self, values):
+        '''
+        Choose randomly the index betwen the max identical ones.
+        '''
         max_index = []
         max_value = max(values)
         for i, value in enumerate(values):
@@ -188,29 +224,87 @@ class PlayerSearchTreeAI(Player) :
         return random.choice(max_index)
 
     def strategy(self, gameState: GameState.GameState) -> tuple:
-        values = []
-        # For each possibles moves,  compute its value
-        for move in gameState.getPossibleMoves():
-            new_gameState = gameState.copy()
-            new_gameState.playLegalMove(move[0])
-            value = self.MinMaxAlphaBetaPruning(new_gameState, self.depthMax, -float("inf"), float("inf"), False)
-            #print(move, value)
-            values.append(value)
-        # Choose a random state among those with the highest values
-        random_max_index = self.random_max_index(values)
-        bestMove = gameState.getPossibleMoves()[random_max_index][0]
-        return bestMove
+        '''
+        Evaluates each movement recursively according to a given depth.
+        '''
+        # Allow the AI to play randomly. Only usefull to help RL training
+        if self.epsilon != None and random.random() < self.epsilon:
+            return random.choice(gameState.getPossibleMoves())[0]
+        else:
+            values = []
+            # For each possibles moves,  compute its value
+            for move in gameState.getPossibleMoves():
+                new_gameState = gameState.copy()
+                new_gameState.playLegalMove(move[0])
+                value = self.MinMaxAlphaBetaPruning(new_gameState, self.depthMax, -float("inf"), float("inf"), False)
+                #print(move, value)
+                values.append(value)
+            # Choose a random state among those with the highest values
+            random_max_index = self.random_max_index(values)
+            bestMove = gameState.getPossibleMoves()[random_max_index][0]
+            return bestMove
     
+    def receive_last_feedback(self, winning_gameState: GameState.GameState, winner, last_move, reward, gameState: GameState.GameState, looser):
+        pass
+
 
 class PlayerRLAI(Player) :
 
-    def __init__(self, ID) -> None:
+    def __init__(self, ID, learn = False, weights_file = None) -> None:
         Player.__init__(self, ID)
-        # Load the weights of the trained model
-        self.model = RLModel.ScoreFourNN()
-        RLModel.load_weights(self.model, "score_four_RL_weights.pth")
+        self.name = "RLAI"
+        self.learn = learn
+        self.weights_file = weights_file
+        self.model = RLbasic.ScoreFourNN()
+        self.optimizer = RLbasic.optim.Adam(self.model.parameters(), lr = 0.001)
+        self.loss_fn = RLbasic.nn.SmoothL1Loss()
+        self.done = False
+        self.epsilon = 1
+        if learn == False:
+            self.epsilon = 0
+        if weights_file != None:
+            RLbasic.load_weights(self.model, self.weights_file)
 
     def strategy(self, gameState: GameState.GameState) -> tuple:
+        '''
+        Two modes : 
+        1) play to learn using Deep RL,
+        2) play to win using previous trained Deep RL model.
+        '''
         player = 0 if gameState.IsPlayerZeroTurn == True else 1
-        bestMove = RLModel.select_action(player, gameState, self.model, epsilon = 0)[1][0]
-        return bestMove
+        if self.learn == True:
+            move_index, bestMove = RLbasic.select_action(0, player, gameState, self.model, self.epsilon)
+            new_gameState = gameState.copy()
+            new_gameState.playLegalMove(bestMove[0])
+            reward = 1 if new_gameState.getWinner() is not None else 0
+            done = True if new_gameState.checkEnd() == True else False
+            next_player = 1 - player
+            state_input = RLbasic.grid_to_input(gameState.Grid)
+            player_input = RLbasic.torch.tensor([player], dtype = RLbasic.torch.float).unsqueeze(0)
+            action_tensor = RLbasic.torch.tensor([move_index], dtype = RLbasic.torch.int64)
+            reward_tensor = RLbasic.torch.tensor([reward], dtype = RLbasic.torch.float32)
+            next_state_input = RLbasic.grid_to_input(new_gameState.Grid)
+            next_player_input = RLbasic.torch.tensor([next_player], dtype = RLbasic.torch.float).unsqueeze(0)
+            done_tensor = RLbasic.torch.tensor([done], dtype = RLbasic.torch.float32)
+            RLbasic.update_model(0, self.model, self.optimizer, self.loss_fn, state_input, player_input, action_tensor, reward_tensor, next_state_input, next_player_input, done_tensor)
+        else:
+            move_index, bestMove = RLbasic.select_action(0, player, gameState, self.model, epsilon = 0)
+        return bestMove[0]
+    
+    def receive_last_feedback(self, old_gameState: GameState.GameState, winner, last_move, reward, winning_gameState: GameState.GameState, looser):
+        '''
+        When the opponent wins and the episode is about to end, the model learns one
+        last time to take into account the move that led him to the defeat.
+        '''
+        if self.learn == True:
+            for i in range(len(old_gameState.getPossibleMoves())):
+                if old_gameState.getPossibleMoves()[i][0] == last_move:
+                    index_last_move = i
+            old_state_input = RLbasic.grid_to_input(old_gameState.Grid)
+            winner_input = RLbasic.torch.tensor([winner], dtype = RLbasic.torch.float).unsqueeze(0)
+            action_tensor = RLbasic.torch.tensor([index_last_move], dtype = RLbasic.torch.int64)
+            reward_tensor = RLbasic.torch.tensor([reward], dtype = RLbasic.torch.float32)
+            winning_state_input = RLbasic.grid_to_input(winning_gameState.Grid)
+            looser_input = RLbasic.torch.tensor([looser], dtype = RLbasic.torch.float).unsqueeze(0)
+            done_tensor = RLbasic.torch.tensor([1], dtype = RLbasic.torch.float32)
+            RLbasic.update_model(0, self.model, self.optimizer, self.loss_fn, old_state_input, winner_input, action_tensor, reward_tensor, winning_state_input, looser_input, done_tensor)
